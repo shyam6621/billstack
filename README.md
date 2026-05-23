@@ -88,7 +88,4 @@ npm run dev
 | **User** | `test@billjoy.com` | `password` |
 | **Admin** | `admin@billjoy.com` | `admin123` |
 
----
-
-Developed with ❤️ for Advanced FinTech Management.
     
