@@ -23,9 +23,8 @@ public class NotificationService {
     @Transactional(readOnly = true)
     public List<NotificationDto> getMyNotifications(String email) {
         User user = userRepository.findByEmail(email).orElseThrow();
-        return notificationRepository.findByUserIdWithUserOrderByCreatedAtDesc(user.getId())
+        return notificationRepository.findByUserIdWithUserOrderByCreatedAtDesc(user.getId(), org.springframework.data.domain.PageRequest.of(0, MAX_NOTIFICATIONS))
                 .stream()
-                .limit(MAX_NOTIFICATIONS)
                 .map(NotificationDto::fromEntity)
                 .toList();
     }

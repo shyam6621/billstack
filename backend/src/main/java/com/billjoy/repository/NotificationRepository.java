@@ -17,7 +17,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Stri
             WHERE n.user.id = :userId
             ORDER BY n.createdAt DESC
             """)
-    List<Notification> findByUserIdWithUserOrderByCreatedAtDesc(@Param("userId") String userId);
+    List<Notification> findByUserIdWithUserOrderByCreatedAtDesc(@Param("userId") String userId, org.springframework.data.domain.Pageable pageable);
 
     @Query("""
             SELECT n FROM Notification n

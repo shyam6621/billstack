@@ -20,3 +20,7 @@ management:
 app:
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:*}
+  seeder:
+    enabled: ${SEEDER_ENABLED:true}
+    test-user-password: ${SEED_USER_PASSWORD:password}
+    admin-password: ${SEED_ADMIN_PASSWORD:admin123}

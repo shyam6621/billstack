@@ -57,7 +57,7 @@ public class AdminService {
 
     @Transactional(readOnly = true)
     public Page<PaymentDto> getTransactions(Pageable pageable) {
-        return paymentRepository.findAll(pageable)
+        return paymentRepository.findAllWithDetails(pageable)
                 .map(PaymentDto::fromEntity);
     }
 
@@ -81,11 +81,11 @@ public class AdminService {
     public Map<String, Object> getDashboardStats() {
         long totalUsers = userRepository.count();
         long totalBills = billRepository.count();
-        long pendingBills = billRepository.findByStatus(com.billjoy.model.BillStatus.PENDING).size();
-        java.math.BigDecimal totalRevenue = paymentRepository.findAll().stream()
-                .filter(p -> p.getPaymentStatus() == com.billjoy.model.PaymentStatus.SUCCESS)
-                .map(com.billjoy.model.Payment::getAmount)
-                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        long pendingBills = billRepository.countByStatus(com.billjoy.model.BillStatus.PENDING);
+        java.math.BigDecimal totalRevenue = paymentRepository.sumAmountByPaymentStatus(com.billjoy.model.PaymentStatus.SUCCESS);
+        if (totalRevenue == null) {
+            totalRevenue = java.math.BigDecimal.ZERO;
+        }
 
         return Map.of(
                 "totalUsers", totalUsers,
@@ -95,12 +95,14 @@ public class AdminService {
         );
     }
 
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> getMonthlyRevenue() {
-        Map<String, java.math.BigDecimal> revenueByMonth = paymentRepository.findAll().stream()
-                .filter(p -> p.getPaymentStatus() == com.billjoy.model.PaymentStatus.SUCCESS && p.getPaymentDate() != null)
+        List<Object[]> results = paymentRepository.findSuccessPaymentDatesAndAmounts(com.billjoy.model.PaymentStatus.SUCCESS);
+        Map<String, java.math.BigDecimal> revenueByMonth = results.stream()
+                .filter(arr -> arr[0] != null && arr[1] != null)
                 .collect(Collectors.groupingBy(
-                        p -> p.getPaymentDate().getMonth().name().substring(0, 3), // "JAN", "FEB"
-                        Collectors.mapping(com.billjoy.model.Payment::getAmount, Collectors.reducing(java.math.BigDecimal.ZERO, java.math.BigDecimal::add))
+                        arr -> ((java.time.LocalDateTime) arr[0]).getMonth().name().substring(0, 3),
+                        Collectors.mapping(arr -> (java.math.BigDecimal) arr[1], Collectors.reducing(java.math.BigDecimal.ZERO, java.math.BigDecimal::add))
                 ));
 
         return revenueByMonth.entrySet().stream()
@@ -108,21 +110,18 @@ public class AdminService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> getPaymentMethodsStat() {
-        Map<String, Long> methodCounts = paymentRepository.findAll().stream()
-                .filter(p -> p.getPaymentStatus() == com.billjoy.model.PaymentStatus.SUCCESS && p.getPaymentMethod() != null)
-                .collect(Collectors.groupingBy(
-                        p -> p.getPaymentMethod().name(),
-                        Collectors.counting()
-                ));
-
-        return methodCounts.entrySet().stream()
-                .map(e -> Map.<String, Object>of("name", e.getKey().replace("_", " "), "value", e.getValue()))
+        List<Object[]> results = paymentRepository.countPaymentsByMethod(com.billjoy.model.PaymentStatus.SUCCESS);
+        return results.stream()
+                .filter(arr -> arr[0] != null)
+                .map(arr -> Map.<String, Object>of("name", arr[0].toString().replace("_", " "), "value", arr[1]))
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<BillDto> getPendingBills() {
-         return billRepository.findByStatus(com.billjoy.model.BillStatus.PENDING).stream()
+         return billRepository.findByStatusWithUser(com.billjoy.model.BillStatus.PENDING).stream()
                 .map(BillDto::fromEntity)
                 .collect(Collectors.toList());
     }

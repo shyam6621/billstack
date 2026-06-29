@@ -11,6 +11,7 @@ import com.billjoy.repository.BillRepository;
 import com.billjoy.repository.NotificationRepository;
 import com.billjoy.repository.PaymentRepository;
 import com.billjoy.repository.UserRepository;
+import com.billjoy.repository.FraudAlertRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
+import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -29,13 +32,23 @@ public class PaymentService {
     private final UserRepository userRepository;
     private final NotificationRepository notificationRepository;
     private final AuditLogRepository auditLogRepository;
+    private final FraudAlertRepository fraudAlertRepository;
 
     @Transactional
     public PaymentDto processPayment(String email, PayBillRequest request) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        Bill bill = billRepository.findByIdWithUser(request.getBillId())
+        if (request.getIdempotencyKey() != null) {
+            Optional<Payment> existing = paymentRepository.findByIdempotencyKey(request.getIdempotencyKey());
+            if (existing.isPresent()) {
+                log.info("Idempotent request matched. Returning existing transaction ID: {}", existing.get().getTransactionId());
+                return PaymentDto.fromEntity(existing.get());
+            }
+        }
+
+        // Acquire a pessimistic write lock to prevent double payments under high concurrency
+        Bill bill = billRepository.findByIdWithUserForUpdate(request.getBillId())
                 .orElseThrow(() -> new BillNotFoundException(request.getBillId()));
 
         if (!bill.getUser().getId().equals(user.getId())) {
@@ -51,6 +64,35 @@ public class PaymentService {
                     throw new BillAlreadyPaidException(bill.getId());
                 });
 
+        // 1. Check velocity fraud alert (more than 3 successful payments in 2 minutes)
+        LocalDateTime since = LocalDateTime.now().minusMinutes(2);
+        long recentPaymentsCount = paymentRepository.countPaymentsByUserAndStatusSince(user.getId(), PaymentStatus.SUCCESS, since);
+        if (recentPaymentsCount >= 3) {
+            FraudAlert velocityAlert = FraudAlert.builder()
+                    .user(user)
+                    .alertType("VELOCITY")
+                    .severity("HIGH")
+                    .description("User has made " + (recentPaymentsCount + 1) + " successful payments in the last 2 minutes.")
+                    .resolved(false)
+                    .build();
+            fraudAlertRepository.save(velocityAlert);
+            log.warn("Velocity fraud alert created for user: {}", user.getEmail());
+        }
+
+        // 2. Check amount anomaly fraud alert (amount > ₹10,000)
+        if (bill.getAmount().compareTo(new java.math.BigDecimal("10000")) > 0) {
+            String severity = bill.getAmount().compareTo(new java.math.BigDecimal("50000")) > 0 ? "HIGH" : "MEDIUM";
+            FraudAlert amountAlert = FraudAlert.builder()
+                    .user(user)
+                    .alertType("AMOUNT_ANOMALY")
+                    .severity(severity)
+                    .description("High amount transaction of ₹" + bill.getAmount() + " detected.")
+                    .resolved(false)
+                    .build();
+            fraudAlertRepository.save(amountAlert);
+            log.warn("Amount anomaly fraud alert created for user: {} with amount: ₹{}", user.getEmail(), bill.getAmount());
+        }
+
         Payment payment = Payment.builder()
                 .user(user)
                 .bill(bill)
@@ -58,6 +100,7 @@ public class PaymentService {
                 .paymentMethod(request.getPaymentMethod())
                 .paymentStatus(PaymentStatus.SUCCESS)
                 .transactionId("TXN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
+                .idempotencyKey(request.getIdempotencyKey())
                 .build();
         payment = paymentRepository.save(payment);
 

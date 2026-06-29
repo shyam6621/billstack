@@ -24,18 +24,16 @@ public class ActivityService {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        return auditLogRepository.findByUserIdWithUserOrderByCreatedAtDesc(user.getId())
+        return auditLogRepository.findByUserIdWithUserOrderByCreatedAtDesc(user.getId(), org.springframework.data.domain.PageRequest.of(0, MAX_ACTIVITY_LOGS))
                 .stream()
-                .limit(MAX_ACTIVITY_LOGS)
                 .map(AuditLogDto::fromEntity)
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public List<AuditLogDto> getAllActivityLogs() {
-        return auditLogRepository.findAllWithUserOrderByCreatedAtDesc()
+        return auditLogRepository.findAllWithUserOrderByCreatedAtDesc(org.springframework.data.domain.PageRequest.of(0, 50))
                 .stream()
-                .limit(50)
                 .map(AuditLogDto::fromEntity)
                 .toList();
     }

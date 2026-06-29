@@ -16,7 +16,7 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, String> {
             LEFT JOIN FETCH a.user
             ORDER BY a.createdAt DESC
             """)
-    List<AuditLog> findAllWithUserOrderByCreatedAtDesc();
+    List<AuditLog> findAllWithUserOrderByCreatedAtDesc(org.springframework.data.domain.Pageable pageable);
 
     @Query("""
             SELECT a FROM AuditLog a
@@ -24,5 +24,5 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, String> {
             WHERE a.user.id = :userId
             ORDER BY a.createdAt DESC
             """)
-    List<AuditLog> findByUserIdWithUserOrderByCreatedAtDesc(@Param("userId") String userId);
+    List<AuditLog> findByUserIdWithUserOrderByCreatedAtDesc(@Param("userId") String userId, org.springframework.data.domain.Pageable pageable);
 }

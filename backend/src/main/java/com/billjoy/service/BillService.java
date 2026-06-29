@@ -40,15 +40,38 @@ public class BillService {
 
     @Transactional(readOnly = true)
     public BillDto getBillById(String id) {
-        return billRepository.findByIdWithUser(id)
-                .map(BillDto::fromEntity)
+        Bill bill = billRepository.findByIdWithUser(id)
                 .orElseThrow(() -> new BillNotFoundException(id));
+
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null) {
+            String currentUsername = auth.getName();
+            boolean isAdmin = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+            if (!isAdmin && !bill.getUser().getEmail().equals(currentUsername)) {
+                throw new com.billjoy.exception.UnauthorizedBillAccessException();
+            }
+        }
+
+        return BillDto.fromEntity(bill);
     }
 
     @Transactional
     public BillDto createBill(CreateBillRequest request) {
         User user = userRepository.findById(request.getUser_id())
                 .orElseThrow(() -> new RuntimeException("User not found"));
+
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null) {
+            String currentUsername = auth.getName();
+            boolean isAdmin = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+            if (!isAdmin && !user.getEmail().equals(currentUsername)) {
+                throw new com.billjoy.exception.UnauthorizedBillAccessException();
+            }
+        }
 
         Bill bill = Bill.builder()
                 .user(user)
@@ -66,6 +89,18 @@ public class BillService {
     public BillDto updateBillStatus(String id, BillStatus status) {
         Bill bill = billRepository.findById(id)
                 .orElseThrow(() -> new BillNotFoundException(id));
+
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null) {
+            String currentUsername = auth.getName();
+            boolean isAdmin = auth.getAuthorities().stream()
+                    .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+            if (!isAdmin && !bill.getUser().getEmail().equals(currentUsername)) {
+                throw new com.billjoy.exception.UnauthorizedBillAccessException();
+            }
+        }
+
         bill.setStatus(status);
         return BillDto.fromEntity(billRepository.save(bill));
     }

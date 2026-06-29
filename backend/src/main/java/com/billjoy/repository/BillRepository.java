@@ -30,5 +30,18 @@ public interface BillRepository extends JpaRepository<Bill, String> {
 
     List<Bill> findByStatus(BillStatus status);
 
+    @Query("SELECT b FROM Bill b JOIN FETCH b.user WHERE b.status = :status")
+    List<Bill> findByStatusWithUser(@Param("status") BillStatus status);
+
     List<Bill> findAllByOrderByCreatedAtDesc();
+
+    long countByStatus(BillStatus status);
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT b FROM Bill b
+            JOIN FETCH b.user
+            WHERE b.id = :id
+            """)
+    Optional<Bill> findByIdWithUserForUpdate(@Param("id") String id);
 }

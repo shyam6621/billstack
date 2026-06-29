@@ -40,4 +40,22 @@ public interface PaymentRepository extends JpaRepository<Payment, String> {
             ORDER BY p.paymentDate DESC
             """)
     List<Payment> findAllWithDetailsOrderByPaymentDateDesc();
+
+    Optional<Payment> findByIdempotencyKey(String idempotencyKey);
+
+    @Query("SELECT SUM(p.amount) FROM Payment p WHERE p.paymentStatus = :status")
+    java.math.BigDecimal sumAmountByPaymentStatus(@Param("status") PaymentStatus status);
+
+    @Query("SELECT p.paymentMethod, COUNT(p) FROM Payment p WHERE p.paymentStatus = :status GROUP BY p.paymentMethod")
+    List<Object[]> countPaymentsByMethod(@Param("status") PaymentStatus status);
+
+    @Query("SELECT p.paymentDate, p.amount FROM Payment p WHERE p.paymentStatus = :status")
+    List<Object[]> findSuccessPaymentDatesAndAmounts(@Param("status") PaymentStatus status);
+
+    @Query(value = "SELECT p FROM Payment p JOIN FETCH p.user JOIN FETCH p.bill ORDER BY p.paymentDate DESC",
+           countQuery = "SELECT count(p) FROM Payment p")
+    org.springframework.data.domain.Page<Payment> findAllWithDetails(org.springframework.data.domain.Pageable pageable);
+
+    @Query("SELECT COUNT(p) FROM Payment p WHERE p.user.id = :userId AND p.paymentStatus = :status AND p.paymentDate >= :since")
+    long countPaymentsByUserAndStatusSince(@Param("userId") String userId, @Param("status") PaymentStatus status, @Param("since") java.time.LocalDateTime since);
 }
