@@ -4,19 +4,19 @@ import { authService } from '@/services/authService';
 export type AppRole = 'admin' | 'user';
 
 export interface User {
-  id: number;
+  id: string;
   email: string;
   name: string;
   role: AppRole;
-  created_at?: string;
+  createdAt?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   role: AppRole | null;
   loading: boolean;
-  signUp: (email: string, password: string, name: string) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, name: string) => Promise<User | null>;
+  signIn: (email: string, password: string) => Promise<User | null>;
   signOut: () => Promise<void>;
 }
 
@@ -61,16 +61,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string, name: string) => {
-    await authService.register(email, password, name);
-    // After register, optionally sign them in or wait for them to log in
+    const response = await authService.register(email, password, name);
+    let currentUser: User | null = null;
+
+    if (response?.token) {
+      localStorage.setItem('jwt_token', response.token);
+      currentUser = response.user ?? response;
+      if (currentUser && currentUser.email) {
+        setUser(currentUser);
+        setRole(currentUser.role ? (currentUser.role.toLowerCase() as AppRole) : null);
+      }
+    }
+
+    return currentUser;
   };
 
   const signIn = async (email: string, password: string) => {
     const response = await authService.login(email, password);
-    if (response && response.user) {
-      setUser(response.user);
-      setRole(response.user.role ? (response.user.role.toLowerCase() as AppRole) : null);
+    const currentUser = response.user ?? response;
+    if (currentUser && currentUser.email) {
+      setUser(currentUser);
+      setRole(currentUser.role ? (currentUser.role.toLowerCase() as AppRole) : null);
+      return currentUser;
     }
+    return null;
   };
 
   const signOut = async () => {

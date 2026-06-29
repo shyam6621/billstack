@@ -48,7 +48,7 @@ export default function AdminUsers() {
                   <TableRow key={u.id}>
                     <TableCell className="font-medium">{u.name || '-'}</TableCell>
                     <TableCell>{u.email}</TableCell>
-                    <TableCell className="capitalize">{roleMap[u.user_id] ?? 'user'}</TableCell>
+                    <TableCell className="capitalize">{roleMap[u.id] ?? 'user'}</TableCell>
                     <TableCell>{format(new Date(u.created_at), 'MMM d, yyyy')}</TableCell>
                   </TableRow>
                 ))}

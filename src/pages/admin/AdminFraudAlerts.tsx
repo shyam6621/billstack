@@ -36,15 +36,13 @@ export default function AdminFraudAlerts() {
       return data || [];
     },
   });
-  const profileMap = Object.fromEntries(profiles.map(p => [p.user_id, p]));
+  const profileMap = Object.fromEntries(profiles.map((p: any) => [p.id, p]));
 
   const { data, isLoading } = useQuery({
-    queryKey: ['fraud-alerts', page, showResolved],
+    queryKey: ['fraud-alerts'],
     queryFn: async () => {
-      const searchParams = new URLSearchParams({ page: page.toString(), size: PAGE_SIZE.toString() });
-      if (!showResolved) searchParams.append('resolved', 'false');
-      const data = await fetchWithAuth(`/admin/fraud-alerts?${searchParams.toString()}`);
-      return { alerts: data?.content || [], count: data?.totalElements || 0 };
+      const data = await fetchWithAuth('/admin/fraud-alerts');
+      return { alerts: data?.alerts || [], count: data?.alerts?.length || 0 };
     },
   });
 
@@ -54,7 +52,7 @@ export default function AdminFraudAlerts() {
 
   const resolveMutation = useMutation({
     mutationFn: async (alertId: string) => {
-      await fetchWithAuth(`/admin/fraud-alerts/${alertId}/resolve`, { method: 'POST' });
+      await fetchWithAuth(`/admin/fraud-alerts/${alertId}/resolve`, { method: 'PUT' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fraud-alerts'] });

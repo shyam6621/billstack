@@ -29,7 +29,7 @@ export default function AdminBills() {
     },
   });
 
-  const profileMap = Object.fromEntries(users.map(u => [u.user_id, u]));
+  const profileMap = Object.fromEntries(users.map((u: any) => [u.id, u]));
 
   const { data: bills = [], isLoading } = useQuery({
     queryKey: ['admin-bills'],

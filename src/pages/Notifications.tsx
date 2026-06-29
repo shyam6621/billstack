@@ -61,8 +61,8 @@ export default function Notifications() {
   const markReadMutation = useMutation({
     mutationFn: async (ids: string[]) => {
       await fetchWithAuth('/notifications/mark-read', {
-        method: 'POST',
-        body: JSON.stringify({ ids }),
+        method: 'PUT',
+        body: JSON.stringify({ notificationIds: ids }),
       });
     },
     onSuccess: () => {
@@ -75,7 +75,7 @@ export default function Notifications() {
 
   const markAllReadMutation = useMutation({
     mutationFn: async () => {
-      await fetchWithAuth('/notifications/mark-all-read', { method: 'POST' });
+      await fetchWithAuth('/notifications/mark-all-read', { method: 'PUT' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications-page'] });

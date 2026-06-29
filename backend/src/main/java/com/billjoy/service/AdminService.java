@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,6 +23,7 @@ public class AdminService {
     private final PaymentRepository paymentRepository;
     private final FraudAlertRepository fraudAlertRepository;
     private final AuditLogRepository auditLogRepository;
+    private final ActivityService activityService;
 
     public long getUserCount() {
         return userRepository.count();
@@ -45,12 +47,15 @@ public class AdminService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<PaymentDto> getPayments() {
-        return paymentRepository.findAll().stream()
+        return paymentRepository.findAllWithDetailsOrderByPaymentDateDesc()
+                .stream()
                 .map(PaymentDto::fromEntity)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public Page<PaymentDto> getTransactions(Pageable pageable) {
         return paymentRepository.findAll(pageable)
                 .map(PaymentDto::fromEntity);
@@ -69,11 +74,10 @@ public class AdminService {
     }
 
     public List<AuditLogDto> getAuditLogs() {
-        return auditLogRepository.findTop50ByOrderByCreatedAtDesc().stream()
-                .map(AuditLogDto::fromEntity)
-                .collect(Collectors.toList());
+        return activityService.getAllActivityLogs();
     }
 
+    @Transactional(readOnly = true)
     public Map<String, Object> getDashboardStats() {
         long totalUsers = userRepository.count();
         long totalBills = billRepository.count();
