@@ -1,6 +1,6 @@
 package com.billjoy.dto;
 
-import com.billjoy.model.User;
+import com.billjoy.model.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -12,5 +12,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class AuthResponse {
     private String token;
-    private UserDto user;
+    private String id;
+    private String name;
+    private String email;
+    private Role role;
 }

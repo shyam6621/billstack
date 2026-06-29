@@ -56,7 +56,7 @@ export default function AuditLogs() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['audit-logs', user?.id, page, dateFilter, actionFilter, role],
     queryFn: async () => {
-      const endpoint = role === 'admin' ? '/admin/audit-logs' : '/activity';
+      const endpoint = role === 'ADMIN' ? '/admin/audit-logs' : '/activity';
       const data = await fetchWithAuth(endpoint);
       const allLogs = Array.isArray(data) ? data : (data?.content || []);
       const filtered = allLogs.filter((log: { action?: string; created_at?: unknown }) => {

@@ -18,8 +18,8 @@ import java.util.List;
 @Slf4j
 public class DataSeeder implements CommandLineRunner {
 
-    private static final String TEST_USER_EMAIL = "test@billjoy.com";
-    private static final String ADMIN_USER_EMAIL = "admin@billjoy.com";
+    private static final String TEST_USER_EMAIL = "test@billstack.com";
+    private static final String ADMIN_USER_EMAIL = "admin@billstack.com";
 
     @org.springframework.beans.factory.annotation.Value("${app.seeder.enabled:true}")
     private boolean seederEnabled;
@@ -42,10 +42,10 @@ public class DataSeeder implements CommandLineRunner {
         }
 
         User testUser = ensureUser(TEST_USER_EMAIL, "Test User", testUserPassword, Role.USER);
-        ensureUser(ADMIN_USER_EMAIL, "Admin User", adminPassword, Role.ADMIN);
+        ensureUser(ADMIN_USER_EMAIL, "Admin", adminPassword, Role.ADMIN);
 
         if (billRepository.count() == 0) {
-            log.info("Database has no bills — seeding demo bills for {}", TEST_USER_EMAIL);
+            log.info("Database has no bills - seeding demo bills for {}", TEST_USER_EMAIL);
             List<Bill> demoBills = List.of(
                     createBill(testUser, BillType.ELECTRICITY, "Monthly Electricity", BigDecimal.valueOf(150.50),
                             LocalDate.now().plusDays(5)),
@@ -59,12 +59,23 @@ public class DataSeeder implements CommandLineRunner {
                             LocalDate.now().plusDays(1)));
             billRepository.saveAll(demoBills);
         } else {
-            log.debug("Skipping bill seed — {} bill(s) already exist", billRepository.count());
+            log.debug("Skipping bill seed - {} bill(s) already exist", billRepository.count());
         }
     }
 
     private User ensureUser(String email, String name, String rawPassword, Role role) {
-        return userRepository.findByEmail(email).orElseGet(() -> {
+        return userRepository.findByEmail(email).map(existingUser -> {
+            boolean changed = false;
+            if (existingUser.getRole() != role) {
+                existingUser.setRole(role);
+                changed = true;
+            }
+            if (!name.equals(existingUser.getName())) {
+                existingUser.setName(name);
+                changed = true;
+            }
+            return changed ? userRepository.save(existingUser) : existingUser;
+        }).orElseGet(() -> {
             log.info("Seeding user {}", email);
             User user = User.builder()
                     .name(name)

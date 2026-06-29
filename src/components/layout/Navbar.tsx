@@ -10,7 +10,8 @@ export default function Navbar() {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const homePath = role === 'admin' ? '/admin' : '/dashboard';
+    const homePath = role === 'ADMIN' ? '/admin' : '/dashboard';
+    const loginPath = role === 'ADMIN' ? '/login/admin' : '/login/user';
     const isHomePage = location.pathname === homePath;
 
     const handleBack = () => {
@@ -24,7 +25,7 @@ export default function Navbar() {
 
     const handleLogout = async () => {
         await signOut();
-        navigate('/login', { replace: true });
+        navigate(loginPath, { replace: true });
     };
 
     return (

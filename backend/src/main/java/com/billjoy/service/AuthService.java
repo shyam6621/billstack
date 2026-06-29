@@ -39,11 +39,7 @@ public class AuthService {
                 .build();
         userRepository.save(user);
 
-        String jwtToken = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
-        return AuthResponse.builder()
-                .token(jwtToken)
-                .user(UserDto.fromEntity(user))
-                .build();
+        return buildAuthResponse(user);
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -55,16 +51,22 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        String jwtToken = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
-        return AuthResponse.builder()
-                .token(jwtToken)
-                .user(UserDto.fromEntity(user))
-                .build();
+        return buildAuthResponse(user);
     }
 
     public UserDto getCurrentUser(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         return UserDto.fromEntity(user);
+    }
+
+    private AuthResponse buildAuthResponse(User user) {
+        return AuthResponse.builder()
+                .token(jwtUtil.generateToken(user))
+                .id(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .build();
     }
 }

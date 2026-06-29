@@ -85,8 +85,8 @@ npm run dev
 
 | Role | Email | Password |
 |------|-------|----------|
-| **User** | `test@billjoy.com` | `password` |
-| **Admin** | `admin@billjoy.com` | `admin123` |
+| **User** | `test@billstack.com` | `password` |
+| **Admin** | `admin@billstack.com` | `admin123` |
 
 Author
 

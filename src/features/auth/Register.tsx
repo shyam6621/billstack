@@ -1,13 +1,17 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { CheckCircle } from 'lucide-react';
+import { getDashboardPath, useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import logo from '../../assets/logo.png';
-import { Shield, CheckCircle } from 'lucide-react';
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Registration failed';
+}
 
 export default function Register() {
   const [name, setName] = useState('');
@@ -32,13 +36,9 @@ export default function Register() {
         return;
       }
       toast({ title: 'Account created', description: 'Welcome to BillStack!' });
-      if (user.role === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard');
-      }
-    } catch (error: any) {
-      toast({ title: 'Registration failed', description: error.message, variant: 'destructive' });
+      navigate(getDashboardPath(user.role), { replace: true });
+    } catch (error: unknown) {
+      toast({ title: 'Registration failed', description: getErrorMessage(error), variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -46,7 +46,6 @@ export default function Register() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left panel - gradient */}
       <div className="hidden lg:flex lg:w-1/2 gradient-primary items-center justify-center p-12">
         <div className="max-w-md text-white">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur mb-8 overflow-hidden">
@@ -57,7 +56,7 @@ export default function Register() {
             Create an account and manage all your utility bills effortlessly.
           </p>
           <div className="space-y-3">
-            {['Pay bills in seconds', 'Track all transactions', 'Never miss a due date'].map(item => (
+            {['Pay bills in seconds', 'Track all transactions', 'Never miss a due date'].map((item) => (
               <div key={item} className="flex items-center gap-3 text-white/90">
                 <CheckCircle className="h-5 w-5 text-white/70" />
                 <span>{item}</span>
@@ -67,7 +66,6 @@ export default function Register() {
         </div>
       </div>
 
-      {/* Right panel - form */}
       <div className="flex-1 flex items-center justify-center bg-background px-4">
         <Card className="w-full max-w-md border-0 shadow-lg">
           <CardHeader className="text-center">
@@ -81,15 +79,15 @@ export default function Register() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
-                <Input id="name" placeholder="John Doe" value={name} onChange={e => setName(e.target.value)} required className="h-11" />
+                <Input id="name" placeholder="John Doe" value={name} onChange={(e) => setName(e.target.value)} required className="h-11" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} required className="h-11" />
+                <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required className="h-11" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required className="h-11" />
+                <Input id="password" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required className="h-11" />
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-3">
@@ -97,7 +95,7 @@ export default function Register() {
                 {loading ? 'Creating account...' : 'Sign Up'}
               </Button>
               <p className="text-sm text-muted-foreground">
-                Already have an account? <Link to="/login" className="text-primary font-semibold hover:underline">Sign in</Link>
+                Already have an account? <Link to="/login/user" className="text-primary font-semibold hover:underline">Sign in</Link>
               </p>
             </CardFooter>
           </form>
