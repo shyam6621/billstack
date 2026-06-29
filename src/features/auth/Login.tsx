@@ -79,11 +79,19 @@ export default function Login({ expectedRole }: LoginProps) {
                 <Label htmlFor="password">Password</Label>
                 <Input id="password" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required className="h-11" />
               </div>
+              <p className="text-xs text-muted-foreground">
+                Demo: {isAdmin ? 'admin@billstack.com / admin123' : 'test@billstack.com / password'}
+              </p>
             </CardContent>
             <CardFooter className="flex flex-col gap-3">
               <Button type="submit" className="gradient-primary h-11 w-full border-0 font-semibold shadow-glow" disabled={loading}>
                 {loading ? 'Signing in...' : 'Sign In'}
               </Button>
+              {!isAdmin && (
+                <p className="text-sm text-muted-foreground">
+                  New to BillStack? <Link to="/register" className="font-semibold text-primary hover:underline">Create account</Link>
+                </p>
+              )}
               <div className="flex w-full items-center justify-between text-sm text-muted-foreground">
                 <Link to="/" className="font-semibold text-primary hover:underline">Choose portal</Link>
                 <Link to={getLoginPath(isAdmin ? 'USER' : 'ADMIN')} className="font-semibold text-primary hover:underline">

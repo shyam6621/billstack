@@ -20,6 +20,8 @@ public class DataSeeder implements CommandLineRunner {
 
     private static final String TEST_USER_EMAIL = "test@billstack.com";
     private static final String ADMIN_USER_EMAIL = "admin@billstack.com";
+    private static final String LEGACY_TEST_USER_EMAIL = "test@billjoy.com";
+    private static final String LEGACY_ADMIN_USER_EMAIL = "admin@billjoy.com";
 
     @org.springframework.beans.factory.annotation.Value("${app.seeder.enabled:true}")
     private boolean seederEnabled;
@@ -43,6 +45,8 @@ public class DataSeeder implements CommandLineRunner {
 
         User testUser = ensureUser(TEST_USER_EMAIL, "Test User", testUserPassword, Role.USER);
         ensureUser(ADMIN_USER_EMAIL, "Admin", adminPassword, Role.ADMIN);
+        ensureUser(LEGACY_TEST_USER_EMAIL, "Test User", testUserPassword, Role.USER);
+        ensureUser(LEGACY_ADMIN_USER_EMAIL, "Admin", adminPassword, Role.ADMIN);
 
         if (billRepository.count() == 0) {
             log.info("Database has no bills - seeding demo bills for {}", TEST_USER_EMAIL);
@@ -72,6 +76,10 @@ public class DataSeeder implements CommandLineRunner {
             }
             if (!name.equals(existingUser.getName())) {
                 existingUser.setName(name);
+                changed = true;
+            }
+            if (existingUser.getPassword() == null || !passwordEncoder.matches(rawPassword, existingUser.getPassword())) {
+                existingUser.setPassword(passwordEncoder.encode(rawPassword));
                 changed = true;
             }
             return changed ? userRepository.save(existingUser) : existingUser;
