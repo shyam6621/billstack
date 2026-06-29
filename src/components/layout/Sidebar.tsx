@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { LayoutDashboard, FileText, CreditCard, History, Users, BarChart3, LogOut, Zap, Shield, Activity, Bell, ShieldAlert, Calendar, TrendingUp } from 'lucide-react';
+import { LayoutDashboard, FileText, CreditCard, History, Users, BarChart3, LogOut, Zap, Shield, Activity, Bell, ShieldAlert, Calendar, TrendingUp, type LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -23,7 +23,7 @@ const adminLinks = [
     { to: '/admin/fraud', label: 'Fraud Alerts', icon: ShieldAlert },
 ];
 
-function NavItem({ to, label, icon: Icon, active, onClick }: { to: string; label: string; icon: any; active: boolean; onClick: () => void }) {
+function NavItem({ to, label, icon: Icon, active, onClick }: { to: string; label: string; icon: LucideIcon; active: boolean; onClick: () => void }) {
     return (
         <button
             onClick={onClick}
@@ -93,14 +93,14 @@ export default function Sidebar() {
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium text-sidebar-foreground/80 truncate">{user?.name || user?.email}</p>
-                            <p className="text-[10px] text-sidebar-foreground/40 truncate">{role === 'admin' ? '🛡️ Admin' : '👤 User'}</p>
+                            <p className="text-[10px] text-sidebar-foreground/40 truncate">{role === 'admin' ? 'Admin' : 'User'}</p>
                         </div>
                     </div>
                 </div>
                 <Button
                     variant="ghost"
                     className="w-full justify-start text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent rounded-xl"
-                    onClick={() => { signOut(); navigate('/login'); }}
+                    onClick={async () => { await signOut(); navigate('/login', { replace: true }); }}
                 >
                     <LogOut className="h-4 w-4 mr-2" /> Sign Out
                 </Button>
