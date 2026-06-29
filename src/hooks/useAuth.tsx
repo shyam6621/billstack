@@ -22,6 +22,20 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function normalizeRole(role: unknown): AppRole | null {
+  if (typeof role !== 'string') return null;
+
+  const normalizedRole = role.toLowerCase();
+  return normalizedRole === 'admin' || normalizedRole === 'user' ? normalizedRole : null;
+}
+
+function normalizeUser(user: User | null | undefined): User | null {
+  if (!user?.email) return null;
+
+  const role = normalizeRole(user.role);
+  return role ? { ...user, role } : null;
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
@@ -39,10 +53,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const response = await authService.getCurrentUser();
       const currentUser = response?.user ? response.user : response;
+      const normalizedUser = normalizeUser(currentUser);
 
-      if (currentUser && currentUser.email) {
-        setUser(currentUser);
-        setRole(currentUser.role ? (currentUser.role.toLowerCase() as AppRole) : null);
+      if (normalizedUser) {
+        setUser(normalizedUser);
+        setRole(normalizedUser.role);
       } else {
         setUser(null);
         setRole(null);
@@ -66,10 +81,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (response?.token) {
       localStorage.setItem('jwt_token', response.token);
-      currentUser = response.user ?? response;
-      if (currentUser && currentUser.email) {
+      currentUser = normalizeUser(response.user ?? response);
+      if (currentUser) {
         setUser(currentUser);
-        setRole(currentUser.role ? (currentUser.role.toLowerCase() as AppRole) : null);
+        setRole(currentUser.role);
       }
     }
 
@@ -78,10 +93,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     const response = await authService.login(email, password);
-    const currentUser = response.user ?? response;
-    if (currentUser && currentUser.email) {
+    const currentUser = normalizeUser(response.user ?? response);
+    if (currentUser) {
       setUser(currentUser);
-      setRole(currentUser.role ? (currentUser.role.toLowerCase() as AppRole) : null);
+      setRole(currentUser.role);
       return currentUser;
     }
     return null;
