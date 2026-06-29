@@ -26,9 +26,17 @@ export default function Register() {
     }
     setLoading(true);
     try {
-      await signUp(email, password, name);
-      toast({ title: 'Account created', description: 'Check your email to verify your account.' });
-      navigate('/login');
+      const user = await signUp(email, password, name);
+      if (!user) {
+        toast({ title: 'Registration failed', description: 'Could not create account', variant: 'destructive' });
+        return;
+      }
+      toast({ title: 'Account created', description: 'Welcome to BillStack!' });
+      if (user.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error: any) {
       toast({ title: 'Registration failed', description: error.message, variant: 'destructive' });
     } finally {

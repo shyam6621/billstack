@@ -7,25 +7,29 @@ import com.billjoy.repository.NotificationRepository;
 import com.billjoy.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
 
+    private static final int MAX_NOTIFICATIONS = 20;
+
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
 
+    @Transactional(readOnly = true)
     public List<NotificationDto> getMyNotifications(String email) {
         User user = userRepository.findByEmail(email).orElseThrow();
-        return notificationRepository.findTop20ByUserIdOrderByCreatedAtDesc(user.getId())
+        return notificationRepository.findByUserIdWithUserOrderByCreatedAtDesc(user.getId(), org.springframework.data.domain.PageRequest.of(0, MAX_NOTIFICATIONS))
                 .stream()
                 .map(NotificationDto::fromEntity)
-                .collect(Collectors.toList());
+                .toList();
     }
 
+    @Transactional
     public void markAsRead(String email, List<String> notificationIds) {
         User user = userRepository.findByEmail(email).orElseThrow();
         List<Notification> notifications = notificationRepository.findAllById(notificationIds);
@@ -38,9 +42,10 @@ public class NotificationService {
         notificationRepository.saveAll(notifications);
     }
 
+    @Transactional
     public void markAllAsRead(String email) {
         User user = userRepository.findByEmail(email).orElseThrow();
-        List<Notification> unread = notificationRepository.findByUserIdAndReadFalse(user.getId());
+        List<Notification> unread = notificationRepository.findByUserIdAndReadFalseWithUser(user.getId());
         unread.forEach(n -> n.setRead(true));
         notificationRepository.saveAll(unread);
     }

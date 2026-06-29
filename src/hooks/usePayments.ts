@@ -18,11 +18,14 @@ export function useAllPayments() {
 export function usePayBill() {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: ({ billId, method, amount }: { billId: number; method: string; amount: number }) =>
+        mutationFn: ({ billId, method, amount }: { billId: string; method: string; amount?: number }) =>
             paymentService.payBill(billId, method, amount),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['payments'] });
+            queryClient.invalidateQueries({ queryKey: ['payment-history'] });
             queryClient.invalidateQueries({ queryKey: ['bills'] });
+            queryClient.invalidateQueries({ queryKey: ['audit-logs'] });
+            queryClient.invalidateQueries({ queryKey: ['notifications'] });
         },
     });
 }

@@ -22,3 +22,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Local H2 database files (dev persistence)
+backend/data/
+*.mv.db
+*.trace.db
+
+# Maven build outputs
+target/
+**/target/
+
+# Python helper scripts
+backend_test_*.py

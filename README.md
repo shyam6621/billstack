@@ -88,4 +88,6 @@ npm run dev
 | **User** | `test@billjoy.com` | `password` |
 | **Admin** | `admin@billjoy.com` | `admin123` |
 
-    
+Author
+
+Lead Developer — M. shyam sundar reddy

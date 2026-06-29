@@ -15,6 +15,7 @@ const PAGE_SIZE = 15;
 
 const actionLabels: Record<string, { label: string; color: string }> = {
   PAYMENT_SUCCESS: { label: 'Payment Success', color: 'bg-success/10 text-success border-success/30' },
+  PAYMENT_COMPLETED: { label: 'Payment Success', color: 'bg-success/10 text-success border-success/30' },
   PAYMENT_FAILED: { label: 'Payment Failed', color: 'bg-destructive/10 text-destructive border-destructive/30' },
   PAYMENT_PENDING: { label: 'Payment Pending', color: 'bg-warning/10 text-warning border-warning/30' },
   BILL_STATUS_PAID: { label: 'Bill Paid', color: 'bg-success/10 text-success border-success/30' },
@@ -23,24 +24,50 @@ const actionLabels: Record<string, { label: string; color: string }> = {
   USER_REGISTERED: { label: 'User Registered', color: 'bg-primary/10 text-primary border-primary/30' },
 };
 
+function parseLogDetails(details: unknown): Record<string, unknown> | null {
+  if (!details) return null;
+  if (typeof details === 'object') return details as Record<string, unknown>;
+  if (typeof details === 'string') {
+    try {
+      return JSON.parse(details) as Record<string, unknown>;
+    } catch {
+      return { message: details };
+    }
+  }
+  return null;
+}
+
+function logCreatedAtValue(createdAt: unknown): string {
+  if (!createdAt) return '';
+  if (typeof createdAt === 'string') return createdAt;
+  if (Array.isArray(createdAt)) {
+    const [year, month, day, hour = 0, minute = 0] = createdAt;
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  }
+  return String(createdAt);
+}
+
 export default function AuditLogs() {
   const { user, role } = useAuth();
   const [page, setPage] = useState(0);
   const [dateFilter, setDateFilter] = useState('');
   const [actionFilter, setActionFilter] = useState('ALL');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ['audit-logs', user?.id, page, dateFilter, actionFilter, role],
     queryFn: async () => {
-      const searchParams = new URLSearchParams({
-        page: page.toString(),
-        size: PAGE_SIZE.toString(),
+      const endpoint = role === 'admin' ? '/admin/audit-logs' : '/activity';
+      const data = await fetchWithAuth(endpoint);
+      const allLogs = Array.isArray(data) ? data : (data?.content || []);
+      const filtered = allLogs.filter((log: { action?: string; created_at?: unknown }) => {
+        if (actionFilter !== 'ALL' && log.action !== actionFilter) return false;
+        const createdAt = logCreatedAtValue(log.created_at);
+        if (dateFilter && createdAt && !createdAt.startsWith(dateFilter)) return false;
+        return true;
       });
-      if (dateFilter) searchParams.append('date', dateFilter);
-      if (actionFilter !== 'ALL') searchParams.append('action', actionFilter);
-
-      const data = await fetchWithAuth(`/audit-logs?${searchParams.toString()}`);
-      return { logs: data?.content || [], count: data?.totalElements || 0 };
+      const start = page * PAGE_SIZE;
+      const paginated = filtered.slice(start, start + PAGE_SIZE);
+      return { logs: paginated, count: filtered.length };
     },
     enabled: !!user,
   });
@@ -100,6 +127,10 @@ export default function AuditLogs() {
             <div className="flex justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
             </div>
+          ) : isError ? (
+            <p className="text-center py-12 text-destructive">
+              {(error as Error)?.message || 'Failed to load activity logs.'}
+            </p>
           ) : logs.length === 0 ? (
             <p className="text-center py-12 text-muted-foreground">No activity logs found.</p>
           ) : (
@@ -115,7 +146,8 @@ export default function AuditLogs() {
               <TableBody>
                 {logs.map(log => {
                   const actionInfo = actionLabels[log.action] || { label: log.action, color: 'bg-muted text-muted-foreground' };
-                  const details = log.details as Record<string, any> | null;
+                  const details = parseLogDetails(log.details);
+                  const createdAt = logCreatedAtValue(log.created_at);
                   return (
                     <TableRow key={log.id} className="hover:bg-accent/20 transition-colors">
                       <TableCell>
@@ -153,7 +185,7 @@ export default function AuditLogs() {
                         )}
                       </TableCell>
                       <TableCell className="text-sm whitespace-nowrap font-medium">
-                        {format(new Date(log.created_at), 'MMM d, yyyy HH:mm')}
+                        {createdAt ? format(new Date(createdAt), 'MMM d, yyyy HH:mm') : '-'}
                       </TableCell>
                     </TableRow>
                   );

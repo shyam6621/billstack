@@ -1,24 +1,42 @@
-import { fetchWithAuth } from './api';
+import { API_BASE_URL, fetchWithAuth } from './api';
 
 export const authService = {
     login: async (email: string, password: string) => {
-        const response = await fetchWithAuth('/auth/login', {
+        const response = await fetch(`${API_BASE_URL}/auth/login`, {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password }),
         });
-        // Assuming backend returns { token: "...", user: {...} }
-        if (response?.token) {
-            localStorage.setItem('jwt_token', response.token);
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Login failed');
         }
-        return response;
+
+        const data = await response.json();
+        if (data?.token) {
+            localStorage.setItem('jwt_token', data.token);
+        }
+        return data;
     },
 
     register: async (email: string, password: string, name: string) => {
-        const response = await fetchWithAuth('/auth/register', {
+        const response = await fetch(`${API_BASE_URL}/auth/register`, {
             method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password, name }),
         });
-        return response;
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Registration failed');
+        }
+
+        const data = await response.json();
+        if (data?.token) {
+            localStorage.setItem('jwt_token', data.token);
+        }
+        return data;
     },
 
     getCurrentUser: () => fetchWithAuth('/auth/me'),

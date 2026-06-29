@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchWithAuth } from '@/services/api';
 import { paymentService } from '@/services/paymentService';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,6 +15,24 @@ import { useToast } from '@/hooks/use-toast';
 import InvoiceDownloadButton from '@/components/InvoicePDF';
 
 const PAGE_SIZE = 10;
+
+function paymentStatusValue(status: unknown): string {
+  if (typeof status === 'string') return status;
+  if (status && typeof status === 'object' && 'name' in status) {
+    return String((status as { name: string }).name);
+  }
+  return String(status ?? '');
+}
+
+function paymentDateValue(date: unknown): string {
+  if (!date) return '';
+  if (typeof date === 'string') return date;
+  if (Array.isArray(date)) {
+    const [year, month, day] = date;
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  }
+  return String(date);
+}
 
 const statusConfig: Record<string, { label: string; color: string; icon: any; gradient: string }> = {
   SUCCESS: { label: 'Success', color: 'bg-success/10 text-success border-success/30', icon: CheckCircle, gradient: 'gradient-success' },
@@ -48,18 +65,20 @@ export default function PaymentHistory() {
     },
   });
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ['payment-history', user?.id, page, dateFilter, statusFilter],
     queryFn: async () => {
-      const searchParams = new URLSearchParams({
-        page: page.toString(),
-        size: PAGE_SIZE.toString(),
+      const payments = await paymentService.getMyPayments();
+      const filteredPayments = (payments || []).filter((payment) => {
+        const status = paymentStatusValue(payment.payment_status);
+        const paymentDate = paymentDateValue(payment.payment_date);
+        const matchesStatus = statusFilter === 'ALL' || status === statusFilter;
+        const matchesDate = !dateFilter || paymentDate.startsWith(dateFilter);
+        return matchesStatus && matchesDate;
       });
-      if (dateFilter) searchParams.append('date', dateFilter);
-      if (statusFilter !== 'ALL') searchParams.append('status', statusFilter);
-
-      const data = await fetchWithAuth(`/payments?${searchParams.toString()}`);
-      return { payments: data?.content || [], count: data?.totalElements || 0 };
+      const start = page * PAGE_SIZE;
+      const paginated = filteredPayments.slice(start, start + PAGE_SIZE);
+      return { payments: paginated, count: filteredPayments.length };
     },
     enabled: !!user,
   });
@@ -114,6 +133,10 @@ export default function PaymentHistory() {
             <div className="flex justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
             </div>
+          ) : isError ? (
+            <p className="text-center py-12 text-destructive">
+              {(error as Error)?.message || 'Failed to load payment history.'}
+            </p>
           ) : payments.length === 0 ? (
             <p className="text-center py-12 text-muted-foreground">No transactions found.</p>
           ) : (
@@ -131,17 +154,19 @@ export default function PaymentHistory() {
               </TableHeader>
               <TableBody>
                 {payments.map(p => {
-                  const config = statusConfig[p.payment_status] || statusConfig.PENDING;
+                  const status = paymentStatusValue(p.payment_status);
+                  const config = statusConfig[status] || statusConfig.PENDING;
+                  const paymentDate = paymentDateValue(p.payment_date);
                   return (
                     <TableRow key={p.id} className="cursor-pointer hover:bg-accent/20 transition-colors" onClick={() => setSelectedPayment(p)}>
-                      <TableCell className="font-mono text-xs">{p.transaction_id.slice(0, 16)}...</TableCell>
-                      <TableCell className="font-medium">{(p as any).bills?.bill_type ?? '-'}</TableCell>
+                      <TableCell className="font-mono text-xs">{p.transaction_id?.slice(0, 16)}...</TableCell>
+                      <TableCell className="font-medium">{p.bills?.bill_type ?? '-'}</TableCell>
                       <TableCell className="font-bold">${Number(p.amount).toFixed(2)}</TableCell>
-                      <TableCell>{p.payment_method.replace('_', ' ')}</TableCell>
+                      <TableCell>{String(p.payment_method).replace('_', ' ')}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={config.color}>{config.label}</Badge>
                       </TableCell>
-                      <TableCell>{format(new Date(p.payment_date), 'MMM d, yyyy')}</TableCell>
+                      <TableCell>{paymentDate ? format(new Date(paymentDate), 'MMM d, yyyy') : '-'}</TableCell>
                       <TableCell className="flex items-center gap-1">
                         <Button variant="ghost" size="sm" className="text-primary" onClick={() => setSelectedPayment(p)}><Eye className="h-4 w-4" /></Button>
                         {p.payment_status === 'SUCCESS' && (

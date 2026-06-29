@@ -20,8 +20,16 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      await signIn(email, password);
-      navigate('/dashboard');
+      const user = await signIn(email, password);
+      if (!user) {
+        toast({ title: 'Login failed', description: 'Invalid credentials', variant: 'destructive' });
+        return;
+      }
+      if (user.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error: any) {
       toast({ title: 'Login failed', description: error.message, variant: 'destructive' });
     } finally {
