@@ -3,7 +3,7 @@ package com.billjoy.controller;
 import com.billjoy.repository.UserRepository;
 import com.billjoy.service.DatabaseDiagnosticsService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -13,7 +13,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/debug")
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "app.debug.database.enabled", havingValue = "true")
 public class DatabaseDebugController {
 
     private static final String ADMIN_EMAIL = "admin@billstack.com";
@@ -22,8 +21,15 @@ public class DatabaseDebugController {
     private final DatabaseDiagnosticsService diagnosticsService;
     private final UserRepository userRepository;
 
+    @Value("${app.debug.database.enabled:false}")
+    private boolean databaseDebugEnabled;
+
     @GetMapping("/database")
-    public DatabaseDebugResponse database() {
+    public Object database() {
+        if (!databaseDebugEnabled) {
+            return new DatabaseDebugDisabledResponse(false, "Database debug output is disabled.");
+        }
+
         return new DatabaseDebugResponse(
                 diagnosticsService.activeProfiles(),
                 diagnosticsService.databaseHost(),
@@ -46,6 +52,11 @@ public class DatabaseDebugController {
             long userCount,
             boolean adminExists,
             boolean testExists) {
+    }
+
+    public record DatabaseDebugDisabledResponse(
+            boolean enabled,
+            String message) {
     }
 
     private long userCount() {
