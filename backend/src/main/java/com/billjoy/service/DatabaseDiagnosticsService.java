@@ -45,6 +45,23 @@ public class DatabaseDiagnosticsService {
         }
     }
 
+    public String databaseName() {
+        try (Connection connection = dataSource.getConnection()) {
+            String catalog = connection.getCatalog();
+            return catalog == null || catalog.isBlank() ? "unknown" : catalog;
+        } catch (SQLException ex) {
+            return "unknown";
+        }
+    }
+
+    public boolean isConnected() {
+        try (Connection connection = dataSource.getConnection()) {
+            return connection.isValid(5);
+        } catch (SQLException ex) {
+            return false;
+        }
+    }
+
     public List<String> tables() {
         List<String> tables = new ArrayList<>();
         try (Connection connection = dataSource.getConnection()) {

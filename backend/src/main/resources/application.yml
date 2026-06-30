@@ -24,3 +24,6 @@ app:
     enabled: ${SEEDER_ENABLED:true}
     test-user-password: ${SEED_USER_PASSWORD:password}
     admin-password: ${SEED_ADMIN_PASSWORD:admin123}
+  debug:
+    database:
+      enabled: ${DEBUG_DATABASE_ENABLED:false}

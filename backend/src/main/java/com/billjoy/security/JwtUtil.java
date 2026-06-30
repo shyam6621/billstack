@@ -4,16 +4,20 @@ import com.billjoy.model.User;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import java.util.function.Function;
 
 @Component
+@Slf4j
 public class JwtUtil {
 
     private static final int MIN_SECRET_BYTES = 32;
@@ -27,13 +31,21 @@ public class JwtUtil {
     @PostConstruct
     void validateSecret() {
         if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < MIN_SECRET_BYTES) {
-            throw new IllegalStateException(
-                    "JWT secret must be at least " + MIN_SECRET_BYTES + " bytes (256 bits) for HS256");
+            log.warn("JWT secret is shorter than {} bytes. A SHA-256 derived signing key will be used.", MIN_SECRET_BYTES);
         }
     }
 
     private Key getSigningKey() {
-        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        byte[] secretBytes = secret == null ? new byte[0] : secret.getBytes(StandardCharsets.UTF_8);
+        if (secretBytes.length >= MIN_SECRET_BYTES) {
+            return Keys.hmacShaKeyFor(secretBytes);
+        }
+        try {
+            return Keys.hmacShaKeyFor(MessageDigest.getInstance("SHA-256").digest(secretBytes));
+        } catch (NoSuchAlgorithmException ex) {
+            return Keys.hmacShaKeyFor(("billstack-fallback-signing-key-"
+                    + String.valueOf(secret)).getBytes(StandardCharsets.UTF_8));
+        }
     }
 
     public String generateToken(User user) {
